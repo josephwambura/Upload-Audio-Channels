@@ -141,9 +141,27 @@
 
           audio.src = eve.target.result;
 
-          var ctx = new AudioContext();
+          // Fix up for prefixing
+          window.AudioContext = window.AudioContext||window.webkitAudioContext;
 
-          var source = ctx.createMediaElementSource(audio);
+          var ctx = new AudioContext();
+          //var analyser = ctx.createAnalyser();
+          //const source = ctx.createBufferSource();
+          //var source = ctx.createMediaElementSource(audio);
+
+          //source.connect(analyser);
+          //analyser.connect(ctx.destination);
+
+
+
+
+          var requestXHR = new XMLHttpRequest();
+          requestXHR.open('GET', /* eve.target.result */ URL.createObjectURL(file), true);
+          requestXHR.responseType = 'arraybuffer';
+
+          
+
+
 
           audio.addEventListener('loadedmetadata', function(){
             // Obtain the duration in seconds of the audio file (with milliseconds as well, a float value)
@@ -158,36 +176,56 @@
             // 12 seconds
 
 
-            var metadata = {
-              fileName: file.name,
-              contentType: file.type,
-              fileSize: file.size / (1024 * 1024) + " MB",
-              duration: duration + " hours",
-              numOfChannels: source.channelCount
-            };
 
-            //var tmppath = URL.createObjectURL(file);
-            // Save the audio on Cloud Storage.
-            //var filePath = audio.src;
-            var filePath = file.name;
+            // Decode asynchronously
+            requestXHR.onload = function() {
+              ctx.decodeAudioData(requestXHR.response, function(buffer) {
+                //source = buffer;
+                //source.buffer = buffer;
 
-            if (file) {
-              var url = fileInput.value;
+                
 
-              console.log('File available at', url);
-              linkContainer.innerHTML = '<a href="' + url + '">' + filePath + '</a>';
+                var metadata = {
+                  fileName: file.name,
+                  contentType: file.type,
+                  fileSize: file.size / (1024 * 1024) + " MB",
+                  duration: duration + " hours",
+                  numOfChannels: buffer.numberOfChannels
+                  //numOfChannels: source.channelCount
+                };
 
-              metadataContainer.innerHTML = metadata ? JSON.stringify(metadata, null, '  ') : '';
-            } else {
-              console.error('Upload failed:', error);
-              linkContainer.innerHTML = '';
-            }
+                //var tmppath = URL.createObjectURL(file);
+                // Save the audio on Cloud Storage.
+                //var filePath = audio.src;
+                var filePath = file.name;
+
+                if (file) {
+                  var url = fileInput.value;
+                  //var url = audio.currentSrc;
+
+                  console.log('File available at', url);
+                  linkContainer.innerHTML = '<a href="' + url + '">' + filePath + '</a>';
+
+                  metadataContainer.innerHTML = metadata ? JSON.stringify(metadata, null, '  ') : '';
+
+                  //alert("Number Of Channels: " + buffer.numberOfChannels);
+                } else {
+                  console.error('Upload failed:', error);
+                  linkContainer.innerHTML = '';
+                }
+                  });
+                  //}, onError);
+                }
+                requestXHR.send();
+
+
+            
           },false);
         };
 
         
 
-reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
         
       };
 
